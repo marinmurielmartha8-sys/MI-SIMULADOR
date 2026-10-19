@@ -1,0 +1,2820 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SIMULADOR INTERACTIVO DE INTENSIDAD DE CAMPO ELÉCTRICO</title>
+  <style>
+    /* ==========================================================================
+       1. VARIABLES CSS Y TEMA DARK LAB (UTF-8 COMPATIBLE)
+       ========================================================================== */
+    :root {
+      --bg-dark: #0f172a;
+      --bg-surface: #1e293b;
+      --bg-surface-elevated: #243248;
+      --bg-card: rgba(30, 41, 59, 0.85);
+      --border-color: rgba(255, 255, 255, 0.12);
+      --border-accent: rgba(56, 189, 248, 0.35);
+
+      /* Texto */
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+
+      /* Colores de Física Obligatorios */
+      --color-e-field: #ef4444;    /* Campo eléctrico E (Rojo) */
+      --color-ex: #3b82f6;         /* Componente Ex (Azul) */
+      --color-ey: #10b981;         /* Componente Ey (Verde) */
+      --color-q-pos: #ef4444;      /* Carga positiva (Rojo) */
+      --color-q-neg: #3b82f6;      /* Carga negativa (Azul) */
+      --color-test-pt: #facc15;    /* Punto de prueba (Amarillo 🎯) */
+      --color-lines: rgba(255, 255, 255, 0.28); /* Líneas de campo */
+
+      /* Colores de Pizarra Matemática */
+      --math-k: #38bdf8;          /* 🔵 Azul: Constante k */
+      --math-data: #4ade80;       /* 🟢 Verde: Datos q, r */
+      --math-op: #facc15;         /* 🟡 Amarillo: Operaciones */
+      --math-res: #ef4444;        /* 🔴 Rojo: Resultado final */
+
+      /* Superposición */
+      --color-e1: #00f0ff;        /* Vector E1 (Cian neón) */
+      --color-e2: #f43f5e;        /* Vector E2 (Magenta) */
+      --color-etotal: #ef4444;    /* Vector E total (Rojo destacado) */
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 18px;
+      --font-main: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image:
+        radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(239, 68, 68, 0.05) 0%, transparent 40%);
+      color: var(--text-primary);
+      font-family: var(--font-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* ==========================================================================
+       2. ENCABEZADO Y SELECTOR DE VISTAS
+       ========================================================================== */
+    header {
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      font-size: 26px;
+      filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.6));
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      color: #ffffff;
+      text-transform: uppercase;
+    }
+
+    .brand-badge {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid var(--border-accent);
+      color: var(--math-k);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      margin-left: 8px;
+    }
+
+    /* Barra de Navegación de Vistas */
+    .view-switcher {
+      display: flex;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 4px;
+      border-radius: 999px;
+      border: 1px solid var(--border-color);
+      gap: 4px;
+    }
+
+    .nav-tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 0.88rem;
+      font-weight: 600;
+      padding: 8px 18px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-tab-btn.active {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      color: #ffffff;
+      box-shadow: 0 0 15px rgba(2, 132, 199, 0.4);
+    }
+
+    .nav-tab-btn:hover:not(.active) {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    /* ==========================================================================
+       3. SELECTOR DE MODOS FÍSICOS (UNA CARGA, DOS CARGAS, DIPOLO)
+       ========================================================================== */
+    .mode-bar {
+      background: rgba(30, 41, 59, 0.9);
+      border-bottom: 1px solid var(--border-color);
+      padding: 8px 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .mode-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+
+    .mode-btn {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 6px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mode-btn:hover {
+      border-color: rgba(255, 255, 255, 0.3);
+      color: #ffffff;
+    }
+
+    .mode-btn.active {
+      background: rgba(56, 189, 248, 0.18);
+      border-color: #38bdf8;
+      color: #38bdf8;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+    }
+
+    /* ==========================================================================
+       4. CONTENEDOR DE VISTAS (SIMULADOR vs PIZARRA)
+       ========================================================================== */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .view-section {
+      display: none;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      width: 100%;
+      flex: 1;
+    }
+
+    .view-section.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    /* ==========================================================================
+       5. VISTA 1: LAYOUT PRINCIPAL (70% FÍSICO / 30% PANELES)
+       ========================================================================== */
+    #simView {
+      padding: 16px;
+      gap: 16px;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 7fr 3fr; /* 70% simulación / 30% controles y datos */
+      align-items: start;
+    }
+
+    @media (max-width: 1100px) {
+      #simView {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Columna Izquierda: Escena Física Principal */
+    .physical-scene-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+    }
+
+    /* Canvas Interactivo */
+    .canvas-container {
+      position: relative;
+      background: #090d16;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6);
+      overflow: hidden;
+      min-height: 540px;
+      height: 64vh;
+      display: flex;
+      cursor: crosshair;
+    }
+
+    #mainCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+
+    /* Superposiciones de estado sobre el canvas */
+    .canvas-overlay-header {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .overlay-pill {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .overlay-pill strong {
+      color: var(--math-k);
+    }
+
+    /* Leyenda flotante de vectores en el canvas */
+    .vector-legend-overlay {
+      position: absolute;
+      bottom: 14px;
+      left: 14px;
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 8px 14px;
+      font-size: 0.78rem;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .v-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+    }
+
+    .v-dot-e { color: var(--color-e-field); }
+    .v-dot-ex { color: var(--color-ex); }
+    .v-dot-ey { color: var(--color-ey); }
+    .v-dot-lines { color: rgba(255, 255, 255, 0.7); }
+
+    /* Barra de Intensidad de Campo Eléctrico */
+    .intensity-gauge-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 12px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .gauge-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .gauge-title {
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .gauge-val {
+      font-family: var(--font-mono);
+      font-size: 1.05rem;
+      color: var(--color-e-field);
+    }
+
+    .gauge-track {
+      height: 12px;
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      position: relative;
+    }
+
+    .gauge-fill {
+      height: 100%;
+      width: 45%;
+      background: linear-gradient(90deg, #3b82f6 0%, #facc15 50%, #ef4444 100%);
+      border-radius: 999px;
+      transition: width 0.1s linear;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+    }
+
+    .gauge-scale-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    /* Barra de Controles Principales (Botones Grandes) */
+    .controls-action-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+    }
+
+    .btn-ctrl {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      color: #ffffff;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-ctrl:hover {
+      background: var(--bg-surface-elevated);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .btn-ctrl.primary {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+    }
+
+    .btn-ctrl.primary:hover {
+      background: linear-gradient(135deg, #0369a1, #1d4ed8);
+    }
+
+    .btn-ctrl.math-cta {
+      background: linear-gradient(135deg, #d97706, #b45309);
+      border-color: rgba(251, 191, 36, 0.4);
+      box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);
+    }
+
+    .btn-ctrl.math-cta:hover {
+      background: linear-gradient(135deg, #b45309, #92400e);
+    }
+
+    /* ==========================================================================
+       6. COLUMNA DERECHA: PANELES DE CONTROL, TELEMETRÍA Y DIAGRAMA (30%)
+       ========================================================================== */
+    .sidebar-panels {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .panel-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 6px;
+    }
+
+    .panel-title {
+      font-size: 0.85rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Telemetría Grid */
+    .telemetry-row-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .telemetry-cell {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .telemetry-cell.full {
+      grid-column: span 2;
+    }
+
+    .telemetry-key {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .telemetry-val {
+      font-family: var(--font-mono);
+      font-size: 1.08rem;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .telemetry-val.highlight-e {
+      color: var(--color-e-field);
+      font-size: 1.25rem;
+      text-shadow: 0 0 10px rgba(239, 68, 68, 0.35);
+    }
+
+    .telemetry-val.c-ex { color: var(--color-ex); }
+    .telemetry-val.c-ey { color: var(--color-ey); }
+
+    .telemetry-unit {
+      font-size: 0.72rem;
+      font-weight: normal;
+      color: var(--text-muted);
+      margin-left: 2px;
+    }
+
+    /* Controles de Carga Editables */
+    .charge-editor {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 10px;
+      border-radius: var(--radius-sm);
+    }
+
+    .charge-editor-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-sign {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .btn-sign.pos {
+      background: rgba(239, 68, 68, 0.25);
+      color: #f87171;
+      border-color: rgba(239, 68, 68, 0.5);
+    }
+
+    .btn-sign.neg {
+      background: rgba(59, 130, 246, 0.25);
+      color: #60a5fa;
+      border-color: rgba(59, 130, 246, 0.5);
+    }
+
+    input[type="range"] {
+      flex: 1;
+      height: 6px;
+      background: #334155;
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+      cursor: pointer;
+    }
+
+    /* Diagrama de Vectores Secundario (Canvas 2) */
+    .vector-diagram-box {
+      width: 100%;
+      height: 170px;
+      background: #090d16;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      display: flex;
+    }
+
+    #vectorDiagramCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Ecuaciones Vivas */
+    .formula-badge-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+
+    .formula-row {
+      background: rgba(15, 23, 42, 0.5);
+      padding: 6px 10px;
+      border-radius: 6px;
+      border-left: 3px solid var(--math-k);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .formula-live-res {
+      color: var(--math-op);
+      font-weight: bold;
+    }
+
+    /* ==========================================================================
+       7. VISTA 2: APARTADO MATEMÁTICO (PIZARRA DIGITAL INTERACTIVA)
+       ========================================================================== */
+    #mathView {
+      padding: 20px;
+      max-width: 1100px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .board-top-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 12px;
+    }
+
+    .btn-return-sim {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-color);
+      color: #ffffff;
+      padding: 8px 18px;
+      border-radius: 999px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .btn-return-sim:hover {
+      background: rgba(255, 255, 255, 0.16);
+      transform: translateX(-3px);
+    }
+
+    .board-main-frame {
+      background: #0b1120;
+      border: 2px solid #334155;
+      border-radius: var(--radius-lg);
+      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.7), inset 0 0 120px rgba(0, 0, 0, 0.5);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      position: relative;
+    }
+
+    /* Barra de Herramientas de la Pizarra */
+    .board-controls-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 8px 16px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .board-source-tabs {
+      display: flex;
+      gap: 6px;
+    }
+
+    .source-tab-btn {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-secondary);
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .source-tab-btn.active {
+      background: var(--math-k);
+      color: #000000;
+      border-color: var(--math-k);
+    }
+
+    .board-playback-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-chalk-ctrl {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-chalk-ctrl:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    /* Leyenda de Colores de la Pizarra */
+    .chalk-legend-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 0.8rem;
+      color: #cbd5e1;
+      padding: 0 4px;
+    }
+
+    .legend-bullet {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+    }
+
+    .leg-k { color: var(--math-k); }
+    .leg-data { color: var(--math-data); }
+    .leg-op { color: var(--math-op); }
+    .leg-res { color: var(--math-res); }
+
+    /* Pasos Matemáticos */
+    .math-steps-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-height: 290px;
+    }
+
+    .step-card {
+      background: rgba(15, 23, 42, 0.45);
+      border-left: 4px solid var(--math-k);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      padding: 14px 18px;
+      transition: all 0.3s ease;
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    .step-card.active-step {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .step-card.final-highlight {
+      border-left-color: var(--math-res);
+      background: rgba(239, 68, 68, 0.06);
+    }
+
+    .step-title-row {
+      font-size: 0.8rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #94a3b8;
+      margin-bottom: 6px;
+    }
+
+    .step-formula-text {
+      font-family: var(--font-mono);
+      font-size: 1.25rem;
+      line-height: 1.6;
+      color: #ffffff;
+      word-break: break-word;
+    }
+
+    /* Colores en fórmulas */
+    .c-k { color: var(--math-k); font-weight: 700; }
+    .c-data { color: var(--math-data); font-weight: 700; }
+    .c-op { color: var(--math-op); font-weight: 700; }
+    .c-res { color: var(--math-res); font-weight: 800; }
+
+    /* Cursor de máquina de escribir */
+    .chalk-cursor {
+      display: inline-block;
+      width: 8px;
+      height: 1.2em;
+      background: var(--math-op);
+      vertical-align: middle;
+      animation: blink 0.75s infinite;
+      margin-left: 2px;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* Interpretación física */
+    .physics-meaning-card {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.14), rgba(6, 182, 212, 0.08));
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .phys-badge-icon {
+      font-size: 2.2rem;
+      flex-shrink: 0;
+    }
+
+    .phys-meaning-text {
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: #f1f5f9;
+    }
+
+    .phys-meaning-text strong {
+      color: var(--math-data);
+    }
+
+    /* Tarjeta de Práctica Interactiva ("PRACTICA TÚ") */
+    .practice-section {
+      background: var(--bg-card);
+      border: 1px solid rgba(250, 204, 21, 0.35);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .practice-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .practice-heading {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--math-op);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .practice-body {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    .practice-inputs-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .practice-input-wrap {
+      display: flex;
+      align-items: center;
+      background: #131d33;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: var(--radius-sm);
+      padding: 0 12px;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .practice-input-field {
+      background: transparent;
+      border: none;
+      color: #ffffff;
+      font-family: var(--font-mono);
+      font-size: 1.1rem;
+      padding: 10px 4px;
+      width: 100%;
+      outline: none;
+    }
+
+    .btn-verify-ans {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #ffffff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 11px 22px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+      transition: all 0.2s;
+    }
+
+    .btn-verify-ans:hover {
+      background: linear-gradient(135deg, #059669, #047857);
+      transform: translateY(-1px);
+    }
+
+    .practice-feedback-box {
+      display: none;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    .feedback-ok {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid #10b981;
+      color: #6ee7b7;
+    }
+
+    .feedback-warn {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid #ef4444;
+      color: #fca5a5;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========================================================================
+       ENCABEZADO DE LA APLICACIÓN
+       ======================================================================== -->
+  <header>
+    <div class="brand">
+      <span class="brand-icon">⚡</span>
+      <div>
+        <span class="brand-title">SIMULADOR INTERACTIVO DE INTENSIDAD DE CAMPO ELÉCTRICO</span>
+        <span class="brand-badge">Laboratorio Virtual</span>
+      </div>
+    </div>
+
+    <nav class="view-switcher">
+      <button id="tabSimBtn" class="nav-tab-btn active" onclick="switchMainView('sim')">
+        <span>🎮</span> Simulador Físico
+      </button>
+      <button id="tabMathBtn" class="nav-tab-btn" onclick="switchMainView('math')">
+        <span>🧮</span> Desarrollo Matemático
+      </button>
+    </nav>
+  </header>
+
+  <!-- ========================================================================
+       BARRA DE SELECCIÓN DE MODO FÍSICO
+       ======================================================================== -->
+  <div class="mode-bar">
+    <span class="mode-label">Sistema Electroestático:</span>
+    <button id="btnMode1" class="mode-btn active" onclick="setSystemMode('single')">
+      <span>●</span> UNA CARGA
+    </button>
+    <button id="btnMode2" class="mode-btn" onclick="setSystemMode('two')">
+      <span>● ●</span> DOS CARGAS (SUPERPOSICIÓN)
+    </button>
+    <button id="btnMode3" class="mode-btn" onclick="setSystemMode('dipole')">
+      <span>● ─ ○</span> DIPOLO ELÉCTRICO
+    </button>
+  </div>
+
+  <main>
+    <!-- ======================================================================
+         VISTA 1: ESCENA FÍSICA (70% SIMULACIÓN / 30% CONTROLES Y TELEMETRÍA)
+         ====================================================================== -->
+    <section id="simView" class="view-section active">
+      
+      <!-- COLUMNA IZQUIERDA (~70%): ESCENA FÍSICA Y CONTROLES DIRECTOS -->
+      <div class="physical-scene-wrapper">
+        
+        <!-- Canvas Principal Interactivo -->
+        <div class="canvas-container" id="canvasWrapper">
+          <canvas id="mainCanvas"></canvas>
+
+          <!-- Badges de estado sobre el canvas -->
+          <div class="canvas-overlay-header">
+            <div class="overlay-pill">
+              <span>Escala:</span> <strong>150 px = 1.0 m</strong>
+            </div>
+            <div class="overlay-pill" id="activeModePill">
+              <span>Modo Activo:</span> <strong id="activeModePillText">Una Carga Fuente</strong>
+            </div>
+          </div>
+
+          <!-- Leyenda de Vectores en el Canvas -->
+          <div class="vector-legend-overlay">
+            <span class="v-legend-item v-dot-e">➔ Campo E (Rojo)</span>
+            <span class="v-legend-item v-dot-ex">➔ Ex (Azul)</span>
+            <span class="v-legend-item v-dot-ey">➔ Ey (Verde)</span>
+            <span class="v-legend-item" style="color: #facc15;">🎯 Punto de Prueba</span>
+            <span class="v-legend-item v-dot-lines" id="legendFieldLines">〰 Líneas de Campo</span>
+          </div>
+        </div>
+
+        <!-- Barra de Intensidad de Campo Eléctrico -->
+        <div class="intensity-gauge-panel">
+          <div class="gauge-header">
+            <span class="gauge-title">⚡ INTENSIDAD DEL CAMPO (E)</span>
+            <span class="gauge-val" id="gaugeValText">E = 1.47 × 10⁵ N/C</span>
+          </div>
+          <div class="gauge-track">
+            <div id="gaugeFillBar" class="gauge-fill"></div>
+          </div>
+          <div class="gauge-scale-labels">
+            <span>0% (Débil)</span>
+            <span id="gaugePercentText">52% de intensidad de referencia</span>
+            <span>100% (Muy Fuerte)</span>
+          </div>
+        </div>
+
+        <!-- Botones Grandes de Control Físico -->
+        <div class="controls-action-bar">
+          <button id="btnPlayPause" class="btn-ctrl primary" onclick="togglePlayPause()">
+            <span id="iconPlay">⏸</span> <span id="textPlay">PAUSAR</span>
+          </button>
+          <button class="btn-ctrl" onclick="resetSimulation()">
+            <span>↻</span> REINICIAR
+          </button>
+          <button id="btnToggleLines" class="btn-ctrl" onclick="toggleFieldLines()">
+            <span>🎯</span> LÍNEAS DE CAMPO: <span id="textLinesStatus" style="color: #4ade80;">ON</span>
+          </button>
+          <button class="btn-ctrl math-cta" onclick="switchMainView('math')">
+            <span>🔍</span> VER CÁLCULOS PASO A PASO
+          </button>
+        </div>
+
+      </div>
+
+      <!-- COLUMNA DERECHA (~30%): CONTROLES, DATOS, DIAGRAMA Y ECUACIONES -->
+      <aside class="sidebar-panels">
+
+        <!-- 1. DATOS DEL SISTEMA -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <span class="panel-title">📋 DATOS DEL SISTEMA</span>
+          </div>
+          
+          <div class="charge-editor">
+            <div class="charge-editor-header">
+              <span style="color: #ef4444;">🔴 Carga Fuente 1 (q₁)</span>
+              <span id="q1Readout" style="font-family: var(--font-mono); font-weight: bold;">+2.0 μC</span>
+            </div>
+            <div class="slider-row">
+              <button id="btnSignQ1" class="btn-sign pos" onclick="toggleSignQ1()">+</button>
+              <input type="range" id="sliderQ1" min="0.2" max="10.0" step="0.2" value="2.0" oninput="onQ1Slider(this.value)">
+            </div>
+          </div>
+
+          <div class="charge-editor" id="q2EditorBox" style="display: none;">
+            <div class="charge-editor-header">
+              <span style="color: #3b82f6;">🔵 Carga Fuente 2 (q₂)</span>
+              <span id="q2Readout" style="font-family: var(--font-mono); font-weight: bold;">-2.0 μC</span>
+            </div>
+            <div class="slider-row">
+              <button id="btnSignQ2" class="btn-sign neg" onclick="toggleSignQ2()">−</button>
+              <input type="range" id="sliderQ2" min="0.2" max="10.0" step="0.2" value="2.0" oninput="onQ2Slider(this.value)">
+            </div>
+          </div>
+
+          <div class="telemetry-row-grid">
+            <div class="telemetry-cell">
+              <span class="telemetry-key">Distancia (r)</span>
+              <span class="telemetry-val" id="telemetryDist">0.35 <span class="telemetry-unit">m</span></span>
+            </div>
+            <div class="telemetry-cell">
+              <span class="telemetry-key">Constante (k)</span>
+              <span class="telemetry-val" style="color: var(--math-k); font-size: 0.95rem;">8.99 × 10⁹</span>
+            </div>
+            <div class="telemetry-cell full">
+              <span class="telemetry-key">Posición Punto Prueba (x, y)</span>
+              <span class="telemetry-val" id="telemetryPos" style="font-size: 0.95rem;">(x: 0.35 m, y: 0.00 m)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. CAMPO ELÉCTRICO Y RESULTADOS -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <span class="panel-title">⚡ CAMPO ELÉCTRICO</span>
+          </div>
+          <div class="telemetry-row-grid">
+            <div class="telemetry-cell full">
+              <span class="telemetry-key">Magnitud de E</span>
+              <span class="telemetry-val highlight-e" id="telemetryE">1.47 × 10⁵ <span class="telemetry-unit">N/C</span></span>
+            </div>
+            <div class="telemetry-cell">
+              <span class="telemetry-key">Componente Ex</span>
+              <span class="telemetry-val c-ex" id="telemetryEx">1.47 × 10⁵ <span class="telemetry-unit">N/C</span></span>
+            </div>
+            <div class="telemetry-cell">
+              <span class="telemetry-key">Componente Ey</span>
+              <span class="telemetry-val c-ey" id="telemetryEy">0.00 <span class="telemetry-unit">N/C</span></span>
+            </div>
+            <div class="telemetry-cell full">
+              <span class="telemetry-key">Dirección (θ)</span>
+              <span class="telemetry-val" id="telemetryAngle">0.0 <span class="telemetry-unit">°</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. CÁLCULO RÁPIDO VIVO -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <span class="panel-title">🧮 CÁLCULO EN TIEMPO REAL</span>
+          </div>
+          <div class="telemetry-row-grid">
+            <div class="telemetry-cell">
+              <span class="telemetry-key">Distancia r</span>
+              <span class="telemetry-val" id="quickCalcR">0.35 m</span>
+            </div>
+            <div class="telemetry-cell">
+              <span class="telemetry-key">Carga |q|</span>
+              <span class="telemetry-val" id="quickCalcQ">2.00 μC</span>
+            </div>
+            <div class="telemetry-cell full">
+              <span class="telemetry-key">Fórmula: E = k·|q| / r²</span>
+              <span class="telemetry-val" id="quickCalcRes" style="color: var(--math-op);">E = 1.47 × 10⁵ N/C</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. DIAGRAMA DE VECTORES DEDICADO (CANVAS 2) -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <span class="panel-title">🎯 DIAGRAMA DE VECTORES (DCL)</span>
+          </div>
+          <div class="vector-diagram-box">
+            <canvas id="vectorDiagramCanvas"></canvas>
+          </div>
+          <div style="font-size: 0.74rem; color: var(--text-muted); text-align: center;">
+            Plano cartesiano en el punto de prueba: descomposición de <span style="color: var(--color-ex); font-weight: bold;">Ex</span> y <span style="color: var(--color-ey); font-weight: bold;">Ey</span>
+          </div>
+        </div>
+
+        <!-- 5. ECUACIONES DE CAMPO ELÉCTRICO -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <span class="panel-title">📐 ECUACIONES DE CAMPO ELÉCTRICO</span>
+          </div>
+          <div class="formula-badge-list">
+            <div class="formula-row">
+              <span>E = k · |q| / r²</span>
+              <span class="formula-live-res" id="eqLiveE">1.47 × 10⁵ N/C</span>
+            </div>
+            <div class="formula-row">
+              <span>E = F / q₀ (q₀ = 1 C)</span>
+              <span class="formula-live-res" id="eqLiveF">1.47 × 10⁵ N</span>
+            </div>
+            <div class="formula-row">
+              <span>Ex = E · cos(θ)</span>
+              <span class="formula-live-res" id="eqLiveEx">1.47 × 10⁵ N/C</span>
+            </div>
+            <div class="formula-row">
+              <span>Ey = E · sen(θ)</span>
+              <span class="formula-live-res" id="eqLiveEy">0.00 N/C</span>
+            </div>
+            <div class="formula-row">
+              <span>V = k · q / r (Potencial)</span>
+              <span class="formula-live-res" id="eqLiveV">5.14 × 10⁴ V</span>
+            </div>
+          </div>
+        </div>
+
+      </aside>
+
+    </section>
+
+    <!-- ======================================================================
+         VISTA 2: DESARROLLO MATEMÁTICO (PIZARRA DIGITAL PASO A PASO)
+         ====================================================================== -->
+    <section id="mathView" class="view-section">
+      
+      <div class="board-top-nav">
+        <button class="btn-return-sim" onclick="switchMainView('sim')">
+          ← Volver al simulador
+        </button>
+        <div style="font-weight: 800; color: var(--math-k); font-size: 1.15rem; text-transform: uppercase;">
+          📐 DESARROLLO MATEMÁTICO PASO A PASO
+        </div>
+      </div>
+
+      <div class="board-main-frame">
+        
+        <!-- Toolbar de la Pizarra -->
+        <div class="board-controls-bar">
+          <div class="board-source-tabs" id="boardSourceTabs" style="display: none;">
+            <button class="source-tab-btn active" id="tabSourceQ1" onclick="setBoardSource('q1')">Carga 1 (E₁)</button>
+            <button class="source-tab-btn" id="tabSourceQ2" onclick="setBoardSource('q2')">Carga 2 (E₂)</button>
+            <button class="source-tab-btn" id="tabSourceTotal" onclick="setBoardSource('total')">⚡ Superposición Total</button>
+          </div>
+
+          <div class="chalk-legend-bar">
+            <span class="legend-bullet leg-k">● Constante (k)</span>
+            <span class="legend-bullet leg-data">● Datos (q, r)</span>
+            <span class="legend-bullet leg-op">● Operaciones</span>
+            <span class="legend-bullet leg-res">● Resultado Final</span>
+          </div>
+
+          <div class="board-playback-group">
+            <button class="btn-chalk-ctrl" id="btnChalkPlayPause" onclick="toggleChalkPlayback()">
+              <span id="chalkPlayIcon">⏸</span> Pausar
+            </button>
+            <button class="btn-chalk-ctrl" onclick="skipChalkAnimation()">
+              ⏭ Adelantar
+            </button>
+            <button class="btn-chalk-ctrl" onclick="restartChalkAnimation()">
+              🔁 Repetir
+            </button>
+          </div>
+        </div>
+
+        <!-- Pasos Matemáticos con Animación Tipo Pizarra Letra por Letra -->
+        <div class="math-steps-list">
+          
+          <!-- PASO 1 -->
+          <div class="step-card" id="mathCard1">
+            <div class="step-title-row">PASO 1 — Fórmula base (Ley de Coulomb)</div>
+            <div class="step-formula-text" id="mathText1">
+              E = <span class="c-k">k</span> · <span class="c-data">|q|</span> / <span class="c-data">r²</span>
+            </div>
+          </div>
+
+          <!-- PASO 2 -->
+          <div class="step-card" id="mathCard2">
+            <div class="step-title-row">PASO 2 — Sustituir valores conocidos</div>
+            <div class="step-formula-text" id="mathText2"></div>
+          </div>
+
+          <!-- PASO 3 -->
+          <div class="step-card" id="mathCard3">
+            <div class="step-title-row">PASO 3 — Resolver potencia del denominador (r²)</div>
+            <div class="step-formula-text" id="mathText3"></div>
+          </div>
+
+          <!-- PASO 4 -->
+          <div class="step-card" id="mathCard4">
+            <div class="step-title-row">PASO 4 — Multiplicar numerador (k · |q|)</div>
+            <div class="step-formula-text" id="mathText4"></div>
+          </div>
+
+          <!-- PASO 5 -->
+          <div class="step-card final-highlight" id="mathCard5">
+            <div class="step-title-row">PASO 5 — Resultado final y dirección del vector</div>
+            <div class="step-formula-text" id="mathText5"></div>
+          </div>
+
+        </div>
+
+        <!-- Interpretación física -->
+        <div class="physics-meaning-card" id="physMeaningCard">
+          <div class="phys-badge-icon">🎯</div>
+          <div class="phys-meaning-text" id="physMeaningContent">
+            <!-- Inyectado dinámicamente -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- SECCIÓN PRACTICA TÚ -->
+      <div class="practice-section">
+        <div class="practice-top-row">
+          <div class="practice-heading">
+            <span>🎯 PRACTICA TÚ: Pon a prueba tus cálculos</span>
+          </div>
+          <button class="btn-return-sim" onclick="loadSuggestedChallenge()">
+            ⚡ Cargar Reto: q = −3 μC, r = 0.50 m
+          </button>
+        </div>
+
+        <div class="practice-body" id="practiceProblemText">
+          Calcula la magnitud del campo eléctrico E para una carga de <strong>q = −3.0 μC</strong> a una distancia de <strong>r = 0.50 m</strong>.
+        </div>
+
+        <div class="practice-inputs-row">
+          <div class="practice-input-wrap">
+            <input type="text" id="practiceAnswerInput" class="practice-input-field" placeholder="Ej: 108000 o 1.08e5" autocomplete="off">
+            <span style="color: #94a3b8; font-family: var(--font-mono); font-size: 0.9rem;">N/C</span>
+          </div>
+          <button class="btn-verify-ans" onclick="checkPracticeSolution()">
+            Verificar Respuesta
+          </button>
+          <button class="btn-return-sim" onclick="loadRandomChallenge()">
+            🎲 Otro Reto
+          </button>
+        </div>
+
+        <div id="practiceFeedbackBox" class="practice-feedback-box"></div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- ========================================================================
+       SCRIPT COMPLETO: MOTOR FÍSICO Y ANIMACIONES (UTF-8)
+       ======================================================================== -->
+  <script>
+    /* ==========================================================================
+       1. CONSTANTES FÍSICAS Y ESTADO DEL LABORATORIO
+       ========================================================================== */
+    const COULOMB_K = 8.99e9;      // N·m²/C² (Constante de Coulomb)
+    const PIXELS_PER_METER = 150.0; // 150 píxeles equivalen exactamente a 1.0 metro físico
+
+    // Estado reactivo global del simulador
+    const simState = {
+      // Modo activo: 'single' (1 carga), 'two' (2 cargas), 'dipole' (dipolo)
+      mode: 'single',
+
+      // Carga 1 (Fuente principal)
+      q1: 2.0, // en microCoulombs (μC)
+      posQ1: { x: 300, y: 300 },
+
+      // Carga 2 (Segunda carga o dipolo)
+      q2: -2.0, // en microCoulombs (μC)
+      posQ2: { x: 600, y: 300 },
+
+      // Punto de prueba arrastrable (Sensor 🎯)
+      posP: { x: 450, y: 300 },
+
+      // Configuración de render
+      showFieldLines: true,
+      isRunning: true,
+
+      // Pizarra matemática
+      boardSource: 'q1', // 'q1', 'q2' o 'total'
+
+      // Reto de práctica
+      challenge: {
+        q: -3.0,
+        r: 0.50
+      }
+    };
+
+    /* ==========================================================================
+       2. INICIALIZACIÓN DE CANVASES
+       ========================================================================== */
+    const mainCanvas = document.getElementById('mainCanvas');
+    const mainCtx = mainCanvas.getContext('2d');
+
+    const diagCanvas = document.getElementById('vectorDiagramCanvas');
+    const diagCtx = diagCanvas.getContext('2d');
+
+    let mainWidth = 0;
+    let mainHeight = 0;
+    let diagWidth = 0;
+    let diagHeight = 0;
+    let dpr = window.devicePixelRatio || 1;
+
+    // Arrastre con puntero (Mouse / Touch)
+    let draggingItem = null; // 'q1', 'q2', 'p' o null
+    let dragOffset = { x: 0, y: 0 };
+    let animFrameId = null;
+    let pulseAngle = 0;
+
+    /**
+     * Ajusta el tamaño de los canvases al contenedor físico respetando HiDPI
+     */
+    function resizeCanvases() {
+      const container = document.getElementById('canvasWrapper');
+      mainWidth = container.clientWidth;
+      mainHeight = container.clientHeight;
+      dpr = window.devicePixelRatio || 1;
+
+      mainCanvas.width = mainWidth * dpr;
+      mainCanvas.height = mainHeight * dpr;
+      mainCtx.resetTransform ? mainCtx.resetTransform() : mainCtx.setTransform(1, 0, 0, 1, 0, 0);
+      mainCtx.scale(dpr, dpr);
+
+      // Canvas Secundario de Diagrama de Vectores
+      const diagContainer = diagCanvas.parentElement;
+      diagWidth = diagContainer.clientWidth;
+      diagHeight = diagContainer.clientHeight;
+      diagCanvas.width = diagWidth * dpr;
+      diagCanvas.height = diagHeight * dpr;
+      diagCtx.resetTransform ? diagCtx.resetTransform() : diagCtx.setTransform(1, 0, 0, 1, 0, 0);
+      diagCtx.scale(dpr, dpr);
+
+      // Posicionamiento armónico inicial de cargas según tamaño
+      if (simState.posQ1.x === 300 && simState.posQ1.y === 300) {
+        setupPositionsForMode(simState.mode);
+      }
+    }
+
+    /**
+     * Posiciona de manera estética los objetos al cambiar de modo
+     */
+    function setupPositionsForMode(mode) {
+      const cx = mainWidth / 2;
+      const cy = mainHeight / 2;
+
+      if (mode === 'single') {
+        simState.posQ1 = { x: cx - 120, y: cy };
+        simState.posP  = { x: cx + 100, y: cy };
+        simState.q1 = Math.abs(simState.q1) || 2.0;
+      } else if (mode === 'two') {
+        simState.posQ1 = { x: cx - 180, y: cy - 70 };
+        simState.posQ2 = { x: cx - 180, y: cy + 70 };
+        simState.posP  = { x: cx + 120, y: cy };
+        simState.q1 = 2.0;
+        simState.q2 = -2.0;
+      } else if (mode === 'dipole') {
+        simState.posQ1 = { x: cx - 160, y: cy };
+        simState.posQ2 = { x: cx + 160, y: cy };
+        simState.posP  = { x: cx, y: cy - 100 };
+        simState.q1 = 2.0;
+        simState.q2 = -2.0;
+      }
+    }
+
+    /* ==========================================================================
+       3. FÍSICA ELECTROSTÁTICA Y CÁLCULOS VECTORIALES
+       ========================================================================== */
+
+    /**
+     * Calcula el campo eléctrico E producido por una carga puntual sobre el punto P
+     * E = k * |q| / r²
+     */
+    function computeFieldFromCharge(qMicroC, posQ, posP) {
+      const dxPx = posP.x - posQ.x;
+      const dyPx = posP.y - posQ.y; // En pantalla Y crece hacia abajo
+      const distPx = Math.hypot(dxPx, dyPx);
+      
+      // Distancia de seguridad para evitar singularidad r = 0
+      const safeDistPx = Math.max(distPx, 15);
+      const rMeters = safeDistPx / PIXELS_PER_METER;
+
+      // Conversión de microcoulombs a Coulombs: 1 μC = 10⁻⁶ C
+      const qCoulombs = qMicroC * 1e-6;
+      const absQCoulombs = Math.abs(qCoulombs);
+
+      // Ley de Coulomb: E = k * |q| / r²
+      const magnitude = (COULOMB_K * absQCoulombs) / (rMeters * rMeters);
+
+      // Vector unitario radial desde la carga hacia el punto
+      const ux = dxPx / safeDistPx;
+      const uy = dyPx / safeDistPx;
+
+      // Si q > 0: E apunta alejándose de la carga (+)
+      // Si q < 0: E apunta hacia la carga (−)
+      const chargeSign = qMicroC >= 0 ? 1 : -1;
+
+      // Componentes en coordenadas físicas estándar (eje Y físico invertido respecto a pantalla)
+      const Ex = magnitude * ux * chargeSign;
+      const Ey = magnitude * (-uy) * chargeSign; // Positivo hacia arriba
+
+      // Componentes para dibujo en pantalla (Y hacia abajo)
+      const screenEx = magnitude * ux * chargeSign;
+      const screenEy = magnitude * uy * chargeSign;
+
+      // Ángulo físico estándar en grados respecto al eje +X
+      let angleDeg = Math.atan2(Ey, Ex) * (180 / Math.PI);
+      if (angleDeg < 0) angleDeg += 360;
+
+      // Potencial eléctrico V = k * q / r
+      const potential = (COULOMB_K * qCoulombs) / rMeters;
+
+      return {
+        rMeters,
+        magnitude,
+        Ex,
+        Ey,
+        screenEx,
+        screenEy,
+        angleDeg,
+        potential,
+        chargeSign
+      };
+    }
+
+    /**
+     * Evalúa el estado electrostático completo del sistema activo
+     */
+    function evaluateElectrostaticSystem() {
+      const e1 = computeFieldFromCharge(simState.q1, simState.posQ1, simState.posP);
+      let e2 = null;
+      let eTotal = { ...e1 };
+
+      if (simState.mode === 'two' || simState.mode === 'dipole') {
+        e2 = computeFieldFromCharge(simState.q2, simState.posQ2, simState.posP);
+
+        // Superposición vectorial: E_total = E1 + E2
+        const totalEx = e1.Ex + e2.Ex;
+        const totalEy = e1.Ey + e2.Ey;
+        const totalMagnitude = Math.hypot(totalEx, totalEy);
+
+        let totalAngleDeg = Math.atan2(totalEy, totalEx) * (180 / Math.PI);
+        if (totalAngleDeg < 0) totalAngleDeg += 360;
+
+        eTotal = {
+          rMeters: e1.rMeters,
+          magnitude: totalMagnitude,
+          Ex: totalEx,
+          Ey: totalEy,
+          screenEx: e1.screenEx + e2.screenEx,
+          screenEy: e1.screenEy + e2.screenEy,
+          angleDeg: totalAngleDeg,
+          potential: e1.potential + e2.potential
+        };
+      }
+
+      return { e1, e2, eTotal };
+    }
+
+    /* ==========================================================================
+       4. DIBUJO EN CANVAS PRINCIPAL
+       ========================================================================== */
+
+    /**
+     * Escala logarítmica y visualmente agradable para el tamaño de las flechas
+     */
+    function getArrowPixelLength(magnitude) {
+      if (magnitude <= 0) return 0;
+      const logScale = Math.log10(1 + magnitude / 800);
+      return Math.min(180, Math.max(28, logScale * 42));
+    }
+
+    /**
+     * Dibuja el gradiente de calor de fondo según la intensidad del campo:
+     * azul tenue (débil) → amarillo (medio) → rojo intenso (fuerte)
+     */
+    function drawHeatmapBackground() {
+      const maxRadius = Math.min(mainWidth, mainHeight) * 0.85;
+
+      // Gradiente Carga 1
+      const grad1 = mainCtx.createRadialGradient(
+        simState.posQ1.x, simState.posQ1.y, 8,
+        simState.posQ1.x, simState.posQ1.y, maxRadius
+      );
+      grad1.addColorStop(0, 'rgba(239, 68, 68, 0.40)');       // Rojo intenso (fuerte)
+      grad1.addColorStop(0.25, 'rgba(244, 63, 94, 0.22)');
+      grad1.addColorStop(0.50, 'rgba(250, 204, 21, 0.15)');   // Amarillo (medio)
+      grad1.addColorStop(0.78, 'rgba(56, 189, 248, 0.08)');   // Azul tenue (débil)
+      grad1.addColorStop(1, 'rgba(15, 23, 42, 0)');           // Fondo oscuro
+
+      mainCtx.fillStyle = grad1;
+      mainCtx.fillRect(0, 0, mainWidth, mainHeight);
+
+      if (simState.mode === 'two' || simState.mode === 'dipole') {
+        const grad2 = mainCtx.createRadialGradient(
+          simState.posQ2.x, simState.posQ2.y, 8,
+          simState.posQ2.x, simState.posQ2.y, maxRadius
+        );
+        grad2.addColorStop(0, 'rgba(59, 130, 246, 0.35)');     // Azul/Cian intenso
+        grad2.addColorStop(0.40, 'rgba(250, 204, 21, 0.12)');
+        grad2.addColorStop(0.75, 'rgba(56, 189, 248, 0.06)');
+        grad2.addColorStop(1, 'rgba(15, 23, 42, 0)');
+
+        mainCtx.fillStyle = grad2;
+        mainCtx.fillRect(0, 0, mainWidth, mainHeight);
+      }
+
+      // Retícula sutil de laboratorio
+      mainCtx.strokeStyle = 'rgba(255, 255, 255, 0.035)';
+      mainCtx.lineWidth = 1;
+      const gridSpacing = 50;
+      for (let x = 0; x < mainWidth; x += gridSpacing) {
+        mainCtx.beginPath();
+        mainCtx.moveTo(x, 0);
+        mainCtx.lineTo(x, mainHeight);
+        mainCtx.stroke();
+      }
+      for (let y = 0; y < mainHeight; y += gridSpacing) {
+        mainCtx.beginPath();
+        mainCtx.moveTo(0, y);
+        mainCtx.lineTo(mainWidth, y);
+        mainCtx.stroke();
+      }
+    }
+
+    /**
+     * Dibuja líneas de campo electrostático auténticas mediante integración de Euler
+     */
+    function drawFieldLines() {
+      if (!simState.showFieldLines) return;
+
+      mainCtx.save();
+      mainCtx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+      mainCtx.lineWidth = 1.2;
+
+      const charges = [{ pos: simState.posQ1, q: simState.q1 }];
+      if (simState.mode === 'two' || simState.mode === 'dipole') {
+        charges.push({ pos: simState.posQ2, q: simState.q2 });
+      }
+
+      const numLinesPerCharge = 16;
+      const stepSize = 8;
+      const maxSteps = 120;
+
+      charges.forEach(ch => {
+        const sign = ch.q >= 0 ? 1 : -1;
+        // Trazar líneas saliendo de cargas positivas o entrando a negativas
+        for (let i = 0; i < numLinesPerCharge; i++) {
+          const theta = (i / numLinesPerCharge) * Math.PI * 2;
+          let curX = ch.pos.x + Math.cos(theta) * 28;
+          let curY = ch.pos.y + Math.sin(theta) * 28;
+
+          mainCtx.beginPath();
+          mainCtx.moveTo(curX, curY);
+
+          for (let s = 0; s < maxSteps; s++) {
+            // Calcular campo total en (curX, curY)
+            let totalEx = 0;
+            let totalEy = 0;
+
+            for (const otherCh of charges) {
+              const dx = curX - otherCh.pos.x;
+              const dy = curY - otherCh.pos.y;
+              const d2 = dx * dx + dy * dy;
+              const d = Math.sqrt(d2);
+              if (d < 15) continue;
+              const eMag = (Math.abs(otherCh.q)) / d2;
+              const qS = otherCh.q >= 0 ? 1 : -1;
+              totalEx += eMag * (dx / d) * qS;
+              totalEy += eMag * (dy / d) * qS;
+            }
+
+            const em = Math.hypot(totalEx, totalEy);
+            if (em === 0) break;
+
+            const dir = sign;
+            curX += (totalEx / em) * stepSize * dir;
+            curY += (totalEy / em) * stepSize * dir;
+
+            mainCtx.lineTo(curX, curY);
+
+            // Detener si sale del canvas o llega muy cerca de otra carga
+            if (curX < 0 || curX > mainWidth || curY < 0 || curY > mainHeight) break;
+            let nearOther = false;
+            for (const otherCh of charges) {
+              if (Math.hypot(curX - otherCh.pos.x, curY - otherCh.pos.y) < 22) {
+                nearOther = true;
+                break;
+              }
+            }
+            if (nearOther) break;
+          }
+
+          mainCtx.stroke();
+        }
+      });
+
+      mainCtx.restore();
+    }
+
+    /**
+     * Dibuja una flecha vectorial estilizada con cabeza y etiqueta
+     */
+    function drawStyledArrow(ctx, origin, vx, vy, color, width, label, drawComponents = false) {
+      const vLen = Math.hypot(vx, vy);
+      if (vLen < 2) return;
+
+      const targetX = origin.x + vx;
+      const targetY = origin.y + vy;
+
+      // 1. Si se solicita descomposición (Ex y Ey)
+      if (drawComponents) {
+        // Componente Ex (Azul horizontal)
+        if (Math.abs(vx) > 3) {
+          ctx.save();
+          ctx.strokeStyle = '#3b82f6';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.moveTo(origin.x, origin.y);
+          ctx.lineTo(targetX, origin.y);
+          ctx.stroke();
+
+          // Cabeza Ex
+          const headX = Math.sign(vx) * 8;
+          ctx.fillStyle = '#3b82f6';
+          ctx.beginPath();
+          ctx.moveTo(targetX, origin.y);
+          ctx.lineTo(targetX - headX, origin.y - 4);
+          ctx.lineTo(targetX - headX, origin.y + 4);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.font = 'bold 11px ' + varFont();
+          ctx.fillText('Ex', targetX - headX * 1.5, origin.y - 8);
+          ctx.restore();
+        }
+
+        // Componente Ey (Verde vertical)
+        if (Math.abs(vy) > 3) {
+          ctx.save();
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.moveTo(origin.x, origin.y);
+          ctx.lineTo(origin.x, targetY);
+          ctx.stroke();
+
+          // Cabeza Ey
+          const headY = Math.sign(vy) * 8;
+          ctx.fillStyle = '#10b981';
+          ctx.beginPath();
+          ctx.moveTo(origin.x, targetY);
+          ctx.lineTo(origin.x - 4, targetY - headY);
+          ctx.lineTo(origin.x + 4, targetY - headY);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.font = 'bold 11px ' + varFont();
+          ctx.fillText('Ey', origin.x + 8, targetY - headY * 1.5);
+          ctx.restore();
+        }
+
+        // Líneas punteadas de proyección
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+        ctx.setLineDash([3, 3]);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(targetX, origin.y);
+        ctx.lineTo(targetX, targetY);
+        ctx.lineTo(origin.x, targetY);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 2. Vector principal resultante
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.lineCap = 'round';
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 8;
+
+      ctx.beginPath();
+      ctx.moveTo(origin.x, origin.y);
+      ctx.lineTo(targetX, targetY);
+      ctx.stroke();
+
+      // Cabeza del vector
+      const headSize = Math.min(16, Math.max(10, width * 3.2));
+      const angle = Math.atan2(vy, vx);
+
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(targetX, targetY);
+      ctx.lineTo(
+        targetX - headSize * Math.cos(angle - Math.PI / 6.5),
+        targetY - headSize * Math.sin(angle - Math.PI / 6.5)
+      );
+      ctx.lineTo(
+        targetX - (headSize * 0.6) * Math.cos(angle),
+        targetY - (headSize * 0.6) * Math.sin(angle)
+      );
+      ctx.lineTo(
+        targetX - headSize * Math.cos(angle + Math.PI / 6.5),
+        targetY - headSize * Math.sin(angle + Math.PI / 6.5)
+      );
+      ctx.closePath();
+      ctx.fill();
+
+      // Etiqueta del vector
+      if (label) {
+        ctx.shadowBlur = 0;
+        ctx.font = 'bold 13px ' + varFont();
+        ctx.fillStyle = color;
+        const tagOffsetX = 14 * Math.cos(angle);
+        const tagOffsetY = 14 * Math.sin(angle);
+        ctx.fillText(label, targetX + tagOffsetX, targetY + tagOffsetY);
+      }
+
+      ctx.restore();
+    }
+
+    function varFont() {
+      return getComputedStyle(document.body).fontFamily;
+    }
+
+    /**
+     * Dibuja una Carga Puntual Visible (+ o −)
+     */
+    function drawPointCharge(ctx, pos, qValue, label, isDragging) {
+      const isPositive = qValue >= 0;
+      const baseColor = isPositive ? '#ef4444' : '#3b82f6';
+      const glowColor = isPositive ? 'rgba(239, 68, 68, 0.75)' : 'rgba(59, 130, 246, 0.75)';
+      const radius = 26;
+
+      ctx.save();
+
+      // Anillo de energía pulsante
+      const pulseR = radius + 6 + Math.sin(pulseAngle) * 3;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, pulseR, 0, Math.PI * 2);
+      ctx.strokeStyle = isPositive ? 'rgba(239, 68, 68, 0.35)' : 'rgba(59, 130, 246, 0.35)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Esfera de la Carga
+      ctx.shadowColor = glowColor;
+      ctx.shadowBlur = isDragging ? 25 : 15;
+
+      const grad = ctx.createRadialGradient(
+        pos.x - radius * 0.3, pos.y - radius * 0.3, radius * 0.1,
+        pos.x, pos.y, radius
+      );
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(0.35, baseColor);
+      grad.addColorStop(1, isPositive ? '#991b1b' : '#1e3a8a');
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Borde
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+
+      // Signo (+ o −)
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 24px ' + varFont();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(isPositive ? '+' : '−', pos.x, pos.y - 1);
+
+      // Etiqueta visible obligatoria
+      ctx.font = 'bold 12px ' + varFont();
+      ctx.fillStyle = '#f8fafc';
+      const signStr = isPositive ? '+' : '−';
+      const textTag = `${label} = ${signStr}${Math.abs(qValue).toFixed(1)} μC`;
+      ctx.fillText(textTag, pos.x, pos.y + radius + 16);
+
+      ctx.restore();
+    }
+
+    /**
+     * Dibuja el Punto de Prueba Arrastrable 🎯
+     */
+    function drawTestPointSensor(ctx, pos, isDragging) {
+      const radius = 18;
+      ctx.save();
+
+      // Retícula de mira telescópica exterior
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, radius + 6, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(250, 204, 21, 0.5)';
+      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Diana central amarilla
+      ctx.shadowColor = 'rgba(250, 204, 21, 0.85)';
+      ctx.shadowBlur = isDragging ? 22 : 12;
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Cruz de mira interior
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(pos.x - radius * 0.7, pos.y);
+      ctx.lineTo(pos.x + radius * 0.7, pos.y);
+      ctx.moveTo(pos.x, pos.y - radius * 0.7);
+      ctx.lineTo(pos.x, pos.y + radius * 0.7);
+      ctx.stroke();
+
+      // Centro negro
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Etiqueta flotante
+      ctx.shadowBlur = 0;
+      ctx.font = 'bold 12px ' + varFont();
+      ctx.fillStyle = '#facc15';
+      ctx.textAlign = 'center';
+      ctx.fillText('Punto de Prueba (q₀ = +1 C)', pos.x, pos.y - radius - 10);
+
+      ctx.restore();
+    }
+
+    /**
+     * Dibuja la distancia y guía entre carga y punto P
+     */
+    function drawDistanceIndicator(posQ, posP, label) {
+      const distPx = Math.hypot(posP.x - posQ.x, posP.y - posQ.y);
+      const rMeters = (distPx / PIXELS_PER_METER).toFixed(2);
+
+      // Círculo concéntrico sutil de radio r
+      mainCtx.save();
+      mainCtx.beginPath();
+      mainCtx.arc(posQ.x, posQ.y, distPx, 0, Math.PI * 2);
+      mainCtx.strokeStyle = 'rgba(56, 189, 248, 0.14)';
+      mainCtx.setLineDash([4, 6]);
+      mainCtx.lineWidth = 1.5;
+      mainCtx.stroke();
+
+      // Línea punteada que conecta
+      mainCtx.beginPath();
+      mainCtx.moveTo(posQ.x, posQ.y);
+      mainCtx.lineTo(posP.x, posP.y);
+      mainCtx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+      mainCtx.setLineDash([3, 4]);
+      mainCtx.lineWidth = 1;
+      mainCtx.stroke();
+      mainCtx.restore();
+
+      // Etiqueta flotante con el valor de r
+      const midX = (posQ.x + posP.x) / 2;
+      const midY = (posQ.y + posP.y) / 2;
+      const tag = `${label} = ${rMeters} m`;
+
+      mainCtx.save();
+      mainCtx.font = '11px ' + varFont();
+      const txtW = mainCtx.measureText(tag).width;
+
+      mainCtx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      mainCtx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+      mainCtx.lineWidth = 1;
+      mainCtx.beginPath();
+      mainCtx.roundRect(midX - txtW / 2 - 6, midY - 10, txtW + 12, 20, 4);
+      mainCtx.fill();
+      mainCtx.stroke();
+
+      mainCtx.fillStyle = '#bae6fd';
+      mainCtx.textAlign = 'center';
+      mainCtx.textBaseline = 'middle';
+      mainCtx.fillText(tag, midX, midY);
+      mainCtx.restore();
+    }
+
+    /**
+     * Dibuja el Canvas Secundario (Diagrama de Vectores DCL)
+     */
+    function renderVectorDiagramCanvas(system) {
+      diagCtx.clearRect(0, 0, diagWidth, diagHeight);
+
+      const cx = diagWidth / 2;
+      const cy = diagHeight / 2;
+
+      // Retícula cartesiana del diagrama
+      diagCtx.save();
+      diagCtx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      diagCtx.lineWidth = 1;
+
+      // Eje X
+      diagCtx.beginPath();
+      diagCtx.moveTo(20, cy);
+      diagCtx.lineTo(diagWidth - 20, cy);
+      diagCtx.stroke();
+
+      // Eje Y
+      diagCtx.beginPath();
+      diagCtx.moveTo(cx, 15);
+      diagCtx.lineTo(cx, diagHeight - 15);
+      diagCtx.stroke();
+
+      // Etiquetas de ejes
+      diagCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      diagCtx.font = '10px ' + varFont();
+      diagCtx.fillText('+X', diagWidth - 18, cy - 6);
+      diagCtx.fillText('+Y', cx + 6, 20);
+
+      // Punto central 🎯
+      diagCtx.fillStyle = '#facc15';
+      diagCtx.beginPath();
+      diagCtx.arc(cx, cy, 5, 0, Math.PI * 2);
+      diagCtx.fill();
+
+      // Dibujar vectores en el diagrama DCL
+      const { e1, e2, eTotal } = system;
+
+      if (simState.mode === 'single') {
+        const vLen = getArrowPixelLength(e1.magnitude);
+        const vx = (e1.Ex / e1.magnitude) * vLen;
+        const vy = -(e1.Ey / e1.magnitude) * vLen; // Invertir para canvas
+
+        drawStyledArrow(diagCtx, { x: cx, y: cy }, vx, vy, '#ef4444', 3.5, 'E', true);
+      } else {
+        // Modo 2 Cargas o Dipolo: E1, E2 y Paralelogramo
+        const vLen1 = getArrowPixelLength(e1.magnitude);
+        const vx1 = (e1.Ex / e1.magnitude) * vLen1;
+        const vy1 = -(e1.Ey / e1.magnitude) * vLen1;
+
+        const vLen2 = getArrowPixelLength(e2.magnitude);
+        const vx2 = (e2.Ex / e2.magnitude) * vLen2;
+        const vy2 = -(e2.Ey / e2.magnitude) * vLen2;
+
+        // E1 (Cian)
+        drawStyledArrow(diagCtx, { x: cx, y: cy }, vx1, vy1, '#00f0ff', 2.5, 'E₁');
+
+        // E2 (Magenta)
+        drawStyledArrow(diagCtx, { x: cx, y: cy }, vx2, vy2, '#f43f5e', 2.5, 'E₂');
+
+        // Paralelogramo
+        diagCtx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        diagCtx.setLineDash([3, 3]);
+        diagCtx.lineWidth = 1;
+        diagCtx.beginPath();
+        diagCtx.moveTo(cx + vx1, cy + vy1);
+        diagCtx.lineTo(cx + vx1 + vx2, cy + vy1 + vy2);
+        diagCtx.lineTo(cx + vx2, cy + vy2);
+        diagCtx.stroke();
+        diagCtx.setLineDash([]);
+
+        // E_total (Rojo)
+        drawStyledArrow(diagCtx, { x: cx, y: cy }, vx1 + vx2, vy1 + vy2, '#ef4444', 4, 'E_tot');
+      }
+
+      diagCtx.restore();
+    }
+
+    /**
+     * Bucle de Renderizado Principal en Tiempo Real (requestAnimationFrame)
+     */
+    function renderLoop() {
+      pulseAngle += 0.04;
+      mainCtx.clearRect(0, 0, mainWidth, mainHeight);
+
+      const system = evaluateElectrostaticSystem();
+      const { e1, e2, eTotal } = system;
+
+      // 1. Fondo de calor de intensidad
+      drawHeatmapBackground();
+
+      // 2. Líneas de campo electrostático
+      drawFieldLines();
+
+      // 3. Indicadores de distancia
+      drawDistanceIndicator(simState.posQ1, simState.posP, 'r₁');
+      if (simState.mode === 'two' || simState.mode === 'dipole') {
+        drawDistanceIndicator(simState.posQ2, simState.posP, 'r₂');
+      }
+
+      // 4. Vectores de campo sobre el punto de prueba
+      if (simState.mode === 'single') {
+        const vLen = getArrowPixelLength(e1.magnitude);
+        const vx = (e1.Ex / e1.magnitude) * vLen;
+        const vy = -(e1.Ey / e1.magnitude) * vLen;
+
+        drawStyledArrow(mainCtx, simState.posP, vx, vy, '#ef4444', 4, 'E', true);
+      } else {
+        // Superposición: E1, E2, Paralelogramo y E_total
+        const vLen1 = getArrowPixelLength(e1.magnitude);
+        const vx1 = (e1.Ex / e1.magnitude) * vLen1;
+        const vy1 = -(e1.Ey / e1.magnitude) * vLen1;
+
+        const vLen2 = getArrowPixelLength(e2.magnitude);
+        const vx2 = (e2.Ex / e2.magnitude) * vLen2;
+        const vy2 = -(e2.Ey / e2.magnitude) * vLen2;
+
+        // E1 (Cian)
+        drawStyledArrow(mainCtx, simState.posP, vx1, vy1, '#00f0ff', 2.8, 'E₁');
+
+        // E2 (Magenta)
+        drawStyledArrow(mainCtx, simState.posP, vx2, vy2, '#f43f5e', 2.8, 'E₂');
+
+        // Paralelogramo punteado
+        mainCtx.save();
+        mainCtx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+        mainCtx.setLineDash([4, 4]);
+        mainCtx.lineWidth = 1.5;
+        mainCtx.beginPath();
+        mainCtx.moveTo(simState.posP.x + vx1, simState.posP.y + vy1);
+        mainCtx.lineTo(simState.posP.x + vx1 + vx2, simState.posP.y + vy1 + vy2);
+        mainCtx.lineTo(simState.posP.x + vx2, simState.posP.y + vy2);
+        mainCtx.stroke();
+        mainCtx.restore();
+
+        // E_total (Rojo brillante destacado con componentes)
+        drawStyledArrow(mainCtx, simState.posP, vx1 + vx2, vy1 + vy2, '#ef4444', 4.5, 'E_total', true);
+      }
+
+      // 5. Cargas puntuales
+      drawPointCharge(mainCtx, simState.posQ1, simState.q1, 'q₁', draggingItem === 'q1');
+      if (simState.mode === 'two' || simState.mode === 'dipole') {
+        drawPointCharge(mainCtx, simState.posQ2, simState.q2, 'q₂', draggingItem === 'q2');
+      }
+
+      // 6. Punto de prueba
+      drawTestPointSensor(mainCtx, simState.posP, draggingItem === 'p');
+
+      // 7. Diagrama de vectores secundario
+      renderVectorDiagramCanvas(system);
+
+      // 8. Actualizar toda la telemetría en tiempo real
+      updateRealtimeTelemetry(system);
+
+      if (simState.isRunning && document.getElementById('simView').classList.contains('active')) {
+        animFrameId = requestAnimationFrame(renderLoop);
+      }
+    }
+
+    /* ==========================================================================
+       5. TELEMETRÍA Y ACTUALIZACIÓN EN TIEMPO REAL
+       ========================================================================== */
+
+    function formatSci(val) {
+      if (val === 0 || Math.abs(val) < 1e-12) return '0.00';
+      const exp = Math.floor(Math.log10(Math.abs(val)));
+      const man = val / Math.pow(10, exp);
+      return `${man.toFixed(2)} × 10<sup>${exp}</sup>`;
+    }
+
+    function updateRealtimeTelemetry(system) {
+      const activeE = (simState.mode === 'single') ? system.e1 : system.eTotal;
+      const refE = system.e1;
+
+      // 1. Barra de Intensidad
+      // Mapeo logarítmico para escala 0% - 100%
+      const logRatio = Math.log10(1 + activeE.magnitude / 800) / 4.0;
+      const percent = Math.min(100, Math.max(0, Math.round(logRatio * 100)));
+      document.getElementById('gaugeFillBar').style.width = `${percent}%`;
+      document.getElementById('gaugeValText').innerHTML = `E = ${formatSci(activeE.magnitude)} N/C`;
+      document.getElementById('gaugePercentText').textContent = `${percent}% de intensidad de referencia`;
+
+      // 2. Panel Campo Eléctrico
+      document.getElementById('telemetryE').innerHTML = `${formatSci(activeE.magnitude)} <span class="telemetry-unit">N/C</span>`;
+      document.getElementById('telemetryEx').innerHTML = `${formatSci(activeE.Ex)} <span class="telemetry-unit">N/C</span>`;
+      document.getElementById('telemetryEy').innerHTML = `${formatSci(activeE.Ey)} <span class="telemetry-unit">N/C</span>`;
+      document.getElementById('telemetryAngle').innerHTML = `${activeE.angleDeg.toFixed(1)} <span class="telemetry-unit">°</span>`;
+
+      // 3. Datos del Sistema
+      document.getElementById('telemetryDist').innerHTML = `${refE.rMeters.toFixed(2)} <span class="telemetry-unit">m</span>`;
+      const pXMeters = ((simState.posP.x - simState.posQ1.x) / PIXELS_PER_METER).toFixed(2);
+      const pYMeters = (-(simState.posP.y - simState.posQ1.y) / PIXELS_PER_METER).toFixed(2);
+      document.getElementById('telemetryPos').textContent = `(x: ${pXMeters} m, y: ${pYMeters} m)`;
+
+      // 4. Panel Cálculo Rápido
+      document.getElementById('quickCalcR').textContent = `${refE.rMeters.toFixed(2)} m`;
+      document.getElementById('quickCalcQ').textContent = `${Math.abs(simState.q1).toFixed(2)} μC`;
+      document.getElementById('quickCalcRes').innerHTML = `E = ${formatSci(activeE.magnitude)} N/C`;
+
+      // 5. Ecuaciones Vivas
+      document.getElementById('eqLiveE').innerHTML = `${formatSci(activeE.magnitude)} N/C`;
+      document.getElementById('eqLiveF').innerHTML = `${formatSci(activeE.magnitude)} N`;
+      document.getElementById('eqLiveEx').innerHTML = `${formatSci(activeE.Ex)} N/C`;
+      document.getElementById('eqLiveEy').innerHTML = `${formatSci(activeE.Ey)} N/C`;
+      document.getElementById('eqLiveV').innerHTML = `${formatSci(activeE.potential)} V`;
+    }
+
+    /* ==========================================================================
+       6. INTERACCIÓN CON RATÓN Y PANTALLA TÁCTIL (POINTER EVENTS)
+       ========================================================================== */
+
+    function getCanvasCoords(evt) {
+      const rect = mainCanvas.getBoundingClientRect();
+      return {
+        x: (evt.clientX - rect.left),
+        y: (evt.clientY - rect.top)
+      };
+    }
+
+    mainCanvas.addEventListener('pointerdown', (e) => {
+      const pt = getCanvasCoords(e);
+
+      // Prioridad 1: Punto de prueba 🎯 (radio de agarre 28px)
+      if (Math.hypot(pt.x - simState.posP.x, pt.y - simState.posP.y) <= 28) {
+        draggingItem = 'p';
+        dragOffset = { x: pt.x - simState.posP.x, y: pt.y - simState.posP.y };
+        mainCanvas.setPointerCapture(e.pointerId);
+        return;
+      }
+
+      // Prioridad 2: Carga 1 (radio 32px)
+      if (Math.hypot(pt.x - simState.posQ1.x, pt.y - simState.posQ1.y) <= 32) {
+        draggingItem = 'q1';
+        dragOffset = { x: pt.x - simState.posQ1.x, y: pt.y - simState.posQ1.y };
+        mainCanvas.setPointerCapture(e.pointerId);
+        return;
+      }
+
+      // Prioridad 3: Carga 2 (si está activa)
+      if ((simState.mode === 'two' || simState.mode === 'dipole') &&
+          Math.hypot(pt.x - simState.posQ2.x, pt.y - simState.posQ2.y) <= 32) {
+        draggingItem = 'q2';
+        dragOffset = { x: pt.x - simState.posQ2.x, y: pt.y - simState.posQ2.y };
+        mainCanvas.setPointerCapture(e.pointerId);
+        return;
+      }
+    });
+
+    mainCanvas.addEventListener('pointermove', (e) => {
+      if (!draggingItem) return;
+      const pt = getCanvasCoords(e);
+
+      const boundX = Math.max(30, Math.min(mainWidth - 30, pt.x - dragOffset.x));
+      const boundY = Math.max(30, Math.min(mainHeight - 30, pt.y - dragOffset.y));
+
+      if (draggingItem === 'p') {
+        simState.posP = { x: boundX, y: boundY };
+      } else if (draggingItem === 'q1') {
+        simState.posQ1 = { x: boundX, y: boundY };
+      } else if (draggingItem === 'q2') {
+        simState.posQ2 = { x: boundX, y: boundY };
+      }
+    });
+
+    function releasePointerDrag(e) {
+      if (draggingItem) {
+        draggingItem = null;
+        try { mainCanvas.releasePointerCapture(e.pointerId); } catch(err){}
+      }
+    }
+
+    mainCanvas.addEventListener('pointerup', releasePointerDrag);
+    mainCanvas.addEventListener('pointercancel', releasePointerDrag);
+
+    /* ==========================================================================
+       7. CONTROL DE PARÁMETROS, BOTONES Y MODOS
+       ========================================================================== */
+
+    function setSystemMode(modeName) {
+      simState.mode = modeName;
+      document.getElementById('btnMode1').classList.toggle('active', modeName === 'single');
+      document.getElementById('btnMode2').classList.toggle('active', modeName === 'two');
+      document.getElementById('btnMode3').classList.toggle('active', modeName === 'dipole');
+
+      const q2Box = document.getElementById('q2EditorBox');
+      const pillText = document.getElementById('activeModePillText');
+      const boardTabs = document.getElementById('boardSourceTabs');
+
+      if (modeName === 'single') {
+        q2Box.style.display = 'none';
+        pillText.textContent = 'Una Carga Fuente';
+        boardTabs.style.display = 'none';
+        simState.boardSource = 'q1';
+      } else if (modeName === 'two') {
+        q2Box.style.display = 'flex';
+        pillText.textContent = 'Dos Cargas (Superposición)';
+        boardTabs.style.display = 'flex';
+      } else if (modeName === 'dipole') {
+        q2Box.style.display = 'flex';
+        pillText.textContent = 'Dipolo Eléctrico (+q / −q)';
+        boardTabs.style.display = 'flex';
+      }
+
+      setupPositionsForMode(modeName);
+      updateQ1UI();
+      updateQ2UI();
+    }
+
+    function togglePlayPause() {
+      simState.isRunning = !simState.isRunning;
+      const icon = document.getElementById('iconPlay');
+      const text = document.getElementById('textPlay');
+
+      if (simState.isRunning) {
+        icon.textContent = '⏸';
+        text.textContent = 'PAUSAR';
+        animFrameId = requestAnimationFrame(renderLoop);
+      } else {
+        icon.textContent = '▶';
+        text.textContent = 'ACTIVAR';
+        cancelAnimationFrame(animFrameId);
+      }
+    }
+
+    function resetSimulation() {
+      setupPositionsForMode(simState.mode);
+      simState.q1 = 2.0;
+      simState.q2 = -2.0;
+      updateQ1UI();
+      updateQ2UI();
+    }
+
+    function toggleFieldLines() {
+      simState.showFieldLines = !simState.showFieldLines;
+      const statusText = document.getElementById('textLinesStatus');
+      const legendLines = document.getElementById('legendFieldLines');
+
+      if (simState.showFieldLines) {
+        statusText.textContent = 'ON';
+        statusText.style.color = '#4ade80';
+        legendLines.style.opacity = '1';
+      } else {
+        statusText.textContent = 'OFF';
+        statusText.style.color = '#ef4444';
+        legendLines.style.opacity = '0.3';
+      }
+    }
+
+    // Controles de Carga 1
+    function onQ1Slider(val) {
+      const mag = parseFloat(val);
+      simState.q1 = (simState.q1 >= 0 ? 1 : -1) * mag;
+      updateQ1UI();
+    }
+
+    function toggleSignQ1() {
+      simState.q1 = -simState.q1;
+      updateQ1UI();
+    }
+
+    function updateQ1UI() {
+      const mag = Math.abs(simState.q1);
+      const sign = simState.q1 >= 0 ? '+' : '−';
+      document.getElementById('q1Readout').textContent = `${sign}${mag.toFixed(1)} μC`;
+      document.getElementById('sliderQ1').value = mag;
+
+      const btn = document.getElementById('btnSignQ1');
+      btn.textContent = sign;
+      btn.className = `btn-sign ${simState.q1 >= 0 ? 'pos' : 'neg'}`;
+    }
+
+    // Controles de Carga 2
+    function onQ2Slider(val) {
+      const mag = parseFloat(val);
+      simState.q2 = (simState.q2 >= 0 ? 1 : -1) * mag;
+      updateQ2UI();
+    }
+
+    function toggleSignQ2() {
+      simState.q2 = -simState.q2;
+      updateQ2UI();
+    }
+
+    function updateQ2UI() {
+      const mag = Math.abs(simState.q2);
+      const sign = simState.q2 >= 0 ? '+' : '−';
+      document.getElementById('q2Readout').textContent = `${sign}${mag.toFixed(1)} μC`;
+      document.getElementById('sliderQ2').value = mag;
+
+      const btn = document.getElementById('btnSignQ2');
+      btn.textContent = sign;
+      btn.className = `btn-sign ${simState.q2 >= 0 ? 'pos' : 'neg'}`;
+    }
+
+    /* ==========================================================================
+       8. VISTA 2: APARTADO MATEMÁTICO (ANIMACIÓN LETRA POR LETRA TIPO PIZARRA)
+       ========================================================================== */
+
+    let chalkTimer = null;
+    let chalkStepIdx = 1;
+    let isChalkPaused = false;
+    let isTypingActive = false;
+    let chalkTokens = [];
+    let chalkTokenIdx = 0;
+    let chalkAccumHTML = '';
+    let chalkContentSpan = null;
+    let chalkCursorSpan = null;
+    let chalkDoneCallback = null;
+
+    function setBoardSource(source) {
+      simState.boardSource = source;
+      document.getElementById('tabSourceQ1').classList.toggle('active', source === 'q1');
+      document.getElementById('tabSourceQ2').classList.toggle('active', source === 'q2');
+      document.getElementById('tabSourceTotal').classList.toggle('active', source === 'total');
+      restartChalkAnimation();
+    }
+
+    /**
+     * Motor de escritura letra por letra respetando tags HTML
+     */
+    function typewriterHTMLChalk(element, fullHTML, callback) {
+      clearTimeout(chalkTimer);
+      isTypingActive = true;
+      element.innerHTML = '';
+
+      chalkContentSpan = document.createElement('span');
+      chalkCursorSpan = document.createElement('span');
+      chalkCursorSpan.className = 'chalk-cursor';
+      element.appendChild(chalkContentSpan);
+      element.appendChild(chalkCursorSpan);
+
+      // Desglosar en tokens: tags completos o caracteres de texto
+      chalkTokens = [];
+      let i = 0;
+      while (i < fullHTML.length) {
+        if (fullHTML[i] === '<') {
+          const end = fullHTML.indexOf('>', i);
+          if (end !== -1) {
+            chalkTokens.push(fullHTML.substring(i, end + 1));
+            i = end + 1;
+            continue;
+          }
+        } else if (fullHTML[i] === '&') {
+          const end = fullHTML.indexOf(';', i);
+          if (end !== -1 && end - i < 10) {
+            chalkTokens.push(fullHTML.substring(i, end + 1));
+            i = end + 1;
+            continue;
+          }
+        }
+        chalkTokens.push(fullHTML[i]);
+        i++;
+      }
+
+      chalkTokenIdx = 0;
+      chalkAccumHTML = '';
+      chalkDoneCallback = callback;
+
+      function stepChalk() {
+        if (isChalkPaused) return;
+
+        const batch = 2;
+        for (let b = 0; b < batch && chalkTokenIdx < chalkTokens.length; b++) {
+          chalkAccumHTML += chalkTokens[chalkTokenIdx];
+          chalkTokenIdx++;
+        }
+        chalkContentSpan.innerHTML = chalkAccumHTML;
+
+        if (chalkTokenIdx < chalkTokens.length) {
+          chalkTimer = setTimeout(stepChalk, 16);
+        } else {
+          isTypingActive = false;
+          if (chalkCursorSpan && chalkCursorSpan.parentNode) {
+            chalkCursorSpan.remove();
+          }
+          if (chalkDoneCallback) chalkDoneCallback();
+        }
+      }
+
+      stepChalk();
+    }
+
+    /**
+     * Construye las expresiones matemáticas exactas con valores vivos
+     */
+    function buildMathStepsData() {
+      const system = evaluateElectrostaticSystem();
+      const { e1, e2, eTotal } = system;
+
+      if (simState.boardSource === 'total' && (simState.mode === 'two' || simState.mode === 'dipole')) {
+        return [
+          {
+            title: "PASO 1 — Principio de Superposición Vectorial",
+            html: `E_total = <span class="c-k">E₁</span> + <span class="c-data">E₂</span> (Suma de campos vectoriales)`
+          },
+          {
+            title: "PASO 2 — Descomposición en componentes rectangulares",
+            html: `E₁x = <span class="c-op">${e1.Ex.toExponential(2)}</span> N/C, &nbsp; E₁y = <span class="c-op">${e1.Ey.toExponential(2)}</span> N/C<br>
+                   E₂x = <span class="c-op">${e2.Ex.toExponential(2)}</span> N/C, &nbsp; E₂y = <span class="c-op">${e2.Ey.toExponential(2)}</span> N/C`
+          },
+          {
+            title: "PASO 3 — Sumar componentes X e Y",
+            html: `Ex_total = E₁x + E₂x = <span class="c-data">${eTotal.Ex.toExponential(2)}</span> N/C<br>
+                   Ey_total = E₁y + E₂y = <span class="c-data">${eTotal.Ey.toExponential(2)}</span> N/C`
+          },
+          {
+            title: "PASO 4 — Módulo resultante por Teorema de Pitágoras",
+            html: `|E_total| = √( Ex_total² + Ey_total² ) = <span class="c-op">√( (${eTotal.Ex.toExponential(2)})² + (${eTotal.Ey.toExponential(2)})² )</span>`
+          },
+          {
+            title: "PASO 5 — Resultado final y orientación",
+            html: `E_total = <span class="c-res">${formatSci(eTotal.magnitude)} N/C</span><br>
+                   📐 Dirección: <span class="c-res">${eTotal.angleDeg.toFixed(1)}°</span> respecto al eje horizontal +X`,
+            meaning: `Una carga de prueba imaginaria de <strong>+1 C</strong> colocada en este punto experimentaría la suma vectorial simultánea de las fuerzas ejercidas por ambas cargas.`
+          }
+        ];
+      }
+
+      // Cálculo clásico para una carga individual (q1 o q2)
+      const targetQ = (simState.boardSource === 'q2') ? simState.q2 : simState.q1;
+      const targetE = (simState.boardSource === 'q2') ? e2 : e1;
+
+      const absQMicro = Math.abs(targetQ);
+      const absQCoulombs = absQMicro * 1e-6;
+      const rMeters = targetE.rMeters;
+      const rSquared = rMeters * rMeters;
+      const numerator = COULOMB_K * absQCoulombs;
+      const resultE = targetE.magnitude;
+
+      const action = targetQ >= 0 ? "alejándose de la fuente (fuerza de repulsión)" : "acercándose hacia la fuente (fuerza de atracción)";
+
+      return [
+        {
+          title: "PASO 1 — Fórmula base (Ley de Coulomb)",
+          html: `E = <span class="c-k">k</span> · <span class="c-data">|q|</span> / <span class="c-data">r²</span>`
+        },
+        {
+          title: "PASO 2 — Sustituir valores conocidos",
+          html: `E = (<span class="c-k">8.99 × 10⁹</span>)(<span class="c-data">${absQMicro.toFixed(1)} × 10⁻⁶</span>) / (<span class="c-data">${rMeters.toFixed(2)}</span>)²`
+        },
+        {
+          title: "PASO 3 — Resolver potencia del denominador (r²)",
+          html: `r² = (${rMeters.toFixed(2)})² = <span class="c-op">${rSquared.toFixed(4)} m²</span><br>
+                 E = (<span class="c-k">8.99 × 10⁹</span>)(<span class="c-data">${absQMicro.toFixed(1)} × 10⁻⁶</span>) / <span class="c-op">${rSquared.toFixed(4)}</span>`
+        },
+        {
+          title: "PASO 4 — Multiplicar numerador (k · |q|)",
+          html: `Numerador = (8.99 × 10⁹)(<span class="c-data">${absQMicro.toFixed(1)} × 10⁻⁶</span>) = <span class="c-op">${numerator.toExponential(3)}</span><br>
+                 E = <span class="c-op">${numerator.toExponential(3)}</span> / <span class="c-op">${rSquared.toFixed(4)}</span>`
+        },
+        {
+          title: "PASO 5 — Resultado final y orientación",
+          html: `E = <span class="c-res">${formatSci(resultE)} N/C</span><br>
+                 📐 Dirección: <span class="c-res">${targetE.angleDeg.toFixed(1)}°</span> respecto al eje horizontal +X`,
+          meaning: `Una carga de <strong>+1 C</strong> sentiría una fuerza real de <strong>${formatSci(resultE)} Newtons</strong> ${action}.`
+        }
+      ];
+    }
+
+    function renderChalkboardStep(idx) {
+      const steps = buildMathStepsData();
+      if (idx > steps.length) {
+        clearTimeout(chalkTimer);
+        document.getElementById('chalkPlayIcon').textContent = '🔁';
+        document.getElementById('btnChalkPlayPause').innerHTML = `<span>🔁</span> Repetir`;
+        return;
+      }
+
+      const cardEl = document.getElementById(`mathCard${idx}`);
+      const textEl = document.getElementById(`mathText${idx}`);
+      const data = steps[idx - 1];
+
+      cardEl.querySelector('.step-title-row').textContent = data.title;
+      cardEl.classList.add('active-step');
+
+      typewriterHTMLChalk(textEl, data.html, () => {
+        if (idx === 5) {
+          document.getElementById('physMeaningContent').innerHTML = data.meaning;
+          document.getElementById('physMeaningCard').style.display = 'flex';
+        }
+
+        if (!isChalkPaused) {
+          chalkTimer = setTimeout(() => {
+            renderChalkboardStep(idx + 1);
+          }, 650);
+        }
+      });
+    }
+
+    function restartChalkAnimation() {
+      clearTimeout(chalkTimer);
+      isTypingActive = false;
+      isChalkPaused = false;
+      document.getElementById('chalkPlayIcon').textContent = '⏸';
+      document.getElementById('btnChalkPlayPause').innerHTML = `<span id="chalkPlayIcon">⏸</span> Pausar`;
+
+      for (let i = 1; i <= 5; i++) {
+        const card = document.getElementById(`mathCard${i}`);
+        card.classList.remove('active-step');
+        document.getElementById(`mathText${i}`).innerHTML = '';
+      }
+      document.getElementById('physMeaningCard').style.display = 'none';
+
+      chalkStepIdx = 1;
+      renderChalkboardStep(1);
+    }
+
+    function toggleChalkPlayback() {
+      const btn = document.getElementById('btnChalkPlayPause');
+      if (btn.textContent.includes('Repetir')) {
+        restartChalkAnimation();
+        return;
+      }
+
+      isChalkPaused = !isChalkPaused;
+      if (isChalkPaused) {
+        clearTimeout(chalkTimer);
+        btn.innerHTML = `<span>▶</span> Reanudar`;
+      } else {
+        btn.innerHTML = `<span id="chalkPlayIcon">⏸</span> Pausar`;
+        if (isTypingActive && chalkContentSpan) {
+          // Reanudar escritura activa
+          function resume() {
+            if (isChalkPaused) return;
+            const batch = 2;
+            for (let b = 0; b < batch && chalkTokenIdx < chalkTokens.length; b++) {
+              chalkAccumHTML += chalkTokens[chalkTokenIdx];
+              chalkTokenIdx++;
+            }
+            chalkContentSpan.innerHTML = chalkAccumHTML;
+            if (chalkTokenIdx < chalkTokens.length) {
+              chalkTimer = setTimeout(resume, 16);
+            } else {
+              isTypingActive = false;
+              if (chalkCursorSpan && chalkCursorSpan.parentNode) chalkCursorSpan.remove();
+              if (chalkDoneCallback) chalkDoneCallback();
+            }
+          }
+          resume();
+        } else {
+          for (let i = 1; i <= 5; i++) {
+            if (!document.getElementById(`mathCard${i}`).classList.contains('active-step')) {
+              renderChalkboardStep(i);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    function skipChalkAnimation() {
+      clearTimeout(chalkTimer);
+      isTypingActive = false;
+      isChalkPaused = true;
+      const steps = buildMathStepsData();
+
+      for (let i = 1; i <= 5; i++) {
+        const card = document.getElementById(`mathCard${i}`);
+        const text = document.getElementById(`mathText${i}`);
+        const data = steps[i - 1];
+        card.querySelector('.step-title-row').textContent = data.title;
+        text.innerHTML = data.html;
+        card.classList.add('active-step');
+      }
+
+      document.getElementById('physMeaningContent').innerHTML = steps[4].meaning;
+      document.getElementById('physMeaningCard').style.display = 'flex';
+      document.getElementById('btnChalkPlayPause').innerHTML = `<span>🔁</span> Repetir`;
+    }
+
+    /* ==========================================================================
+       9. SECCIÓN "PRACTICA TÚ"
+       ========================================================================== */
+
+    function loadSuggestedChallenge() {
+      simState.challenge = { q: -3.0, r: 0.50 };
+      document.getElementById('practiceProblemText').innerHTML = 
+        `Calcula la magnitud del campo eléctrico E para una carga de <strong>q = −3.0 μC</strong> a una distancia de <strong>r = 0.50 m</strong>.
+         <br><button class="btn-return-sim" style="margin-top: 8px; font-size: 0.8rem;" onclick="applyChallengeToSimulation(-3.0, 0.50)">
+           ⚡ Ver en el Simulador y la Pizarra
+         </button>`;
+      
+      const fb = document.getElementById('practiceFeedbackBox');
+      fb.style.display = 'none';
+      document.getElementById('practiceAnswerInput').value = '';
+      document.getElementById('practiceAnswerInput').focus();
+    }
+
+    function loadRandomChallenge() {
+      const qList = [1.5, 2.0, 2.5, 3.0, 4.0, 5.0, -1.0, -2.0, -3.0, -4.0];
+      const rList = [0.25, 0.35, 0.40, 0.50, 0.60, 0.75, 1.00, 1.25];
+
+      const rQ = qList[Math.floor(Math.random() * qList.length)];
+      const rR = rList[Math.floor(Math.random() * rList.length)];
+
+      simState.challenge = { q: rQ, r: rR };
+      const sign = rQ >= 0 ? '+' : '';
+      document.getElementById('practiceProblemText').innerHTML = 
+        `Calcula la magnitud del campo eléctrico E para una carga de <strong>q = ${sign}${rQ.toFixed(1)} μC</strong> a una distancia de <strong>r = ${rR.toFixed(2)} m</strong>.
+         <br><button class="btn-return-sim" style="margin-top: 8px; font-size: 0.8rem;" onclick="applyChallengeToSimulation(${rQ}, ${rR})">
+           ⚡ Ver en el Simulador y la Pizarra
+         </button>`;
+
+      const fb = document.getElementById('practiceFeedbackBox');
+      fb.style.display = 'none';
+      document.getElementById('practiceAnswerInput').value = '';
+      document.getElementById('practiceAnswerInput').focus();
+    }
+
+    function applyChallengeToSimulation(qVal, rVal) {
+      simState.q1 = qVal;
+      updateQ1UI();
+      simState.posP = {
+        x: simState.posQ1.x + Math.round(rVal * PIXELS_PER_METER),
+        y: simState.posQ1.y
+      };
+      skipChalkAnimation();
+    }
+
+    function checkPracticeSolution() {
+      const inputStr = document.getElementById('practiceAnswerInput').value.trim();
+      const fb = document.getElementById('practiceFeedbackBox');
+
+      if (!inputStr) {
+        fb.className = 'practice-feedback-box feedback-warn';
+        fb.innerHTML = '⚠️ Por favor, ingresa un valor numérico antes de verificar.';
+        fb.style.display = 'block';
+        return;
+      }
+
+      let clean = inputStr.replace(/,/g, '.').replace(/\s+/g, '').toLowerCase();
+      clean = clean.replace(/x10\^?(\d+)/i, 'e$1').replace(/x10\^?(-?\d+)/i, 'e$1');
+      clean = clean.replace(/\*10\^?(\d+)/i, 'e$1').replace(/\*10\^?(-?\d+)/i, 'e$1');
+
+      const userVal = parseFloat(clean);
+      if (isNaN(userVal) || userVal <= 0) {
+        fb.className = 'practice-feedback-box feedback-warn';
+        fb.innerHTML = '❌ Formato inválido. Ingresa un número positivo en N/C (ej: <code>108000</code> o <code>1.08e5</code>).';
+        fb.style.display = 'block';
+        return;
+      }
+
+      const expected = (COULOMB_K * (Math.abs(simState.challenge.q) * 1e-6)) / (simState.challenge.r * simState.challenge.r);
+      const relativeErr = Math.abs(userVal - expected) / expected;
+
+      fb.style.display = 'block';
+
+      if (relativeErr <= 0.05) {
+        fb.className = 'practice-feedback-box feedback-ok';
+        fb.innerHTML = `🎉 <strong>¡Excelente deducción física!</strong><br>
+          Tu resultado <code>${userVal.toExponential(2)} N/C</code> es correcto.<br>
+          Valor teórico exacto: <strong>${expected.toExponential(3)} N/C</strong> (${Math.round(expected).toLocaleString()} N/C).`;
+      } else {
+        fb.className = 'practice-feedback-box feedback-warn';
+        const errForgotR2 = (COULOMB_K * (Math.abs(simState.challenge.q) * 1e-6)) / simState.challenge.r;
+        const errMicroC = (COULOMB_K * Math.abs(simState.challenge.q)) / (simState.challenge.r * simState.challenge.r);
+
+        if (Math.abs(userVal - errForgotR2) / errForgotR2 < 0.06) {
+          fb.innerHTML = `💡 <strong>Pista de cálculo:</strong> Parece que dividiste entre <code>r</code> en lugar de <code>r²</code>. Recuerda elevar <strong>${simState.challenge.r}² = ${(simState.challenge.r * simState.challenge.r).toFixed(4)}</strong> en el denominador.`;
+        } else if (Math.abs(userVal - errMicroC) / errMicroC < 0.06) {
+          fb.innerHTML = `💡 <strong>Pista de unidades:</strong> Recuerda multiplicar por <code>10⁻⁶</code> para convertir μC a Coulombs (1 μC = 10⁻⁶ C).`;
+        } else {
+          fb.innerHTML = `❌ <strong>Revisemos los pasos:</strong> Tu resultado difiere del esperado (<strong>${expected.toExponential(2)} N/C</strong>).<br>
+            Fórmula: <code>(8.99 × 10⁹) · (${Math.abs(simState.challenge.q)} × 10⁻⁶) / (${simState.challenge.r})²</code>. ¡Inténtalo de nuevo!`;
+        }
+      }
+    }
+
+    document.getElementById('practiceAnswerInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') checkPracticeSolution();
+    });
+
+    /* ==========================================================================
+       10. NAVEGACIÓN ENTRE VISTAS
+       ========================================================================== */
+
+    function switchMainView(viewName) {
+      const simSec = document.getElementById('simView');
+      const mathSec = document.getElementById('mathView');
+      const tabSim = document.getElementById('tabSimBtn');
+      const tabMath = document.getElementById('tabMathBtn');
+
+      if (viewName === 'sim') {
+        mathSec.classList.remove('active');
+        simSec.classList.add('active');
+        tabMath.classList.remove('active');
+        tabSim.classList.add('active');
+
+        resizeCanvases();
+        cancelAnimationFrame(animFrameId);
+        animFrameId = requestAnimationFrame(renderLoop);
+      } else {
+        simSec.classList.remove('active');
+        mathSec.classList.add('active');
+        tabSim.classList.remove('active');
+        tabMath.classList.add('active');
+
+        cancelAnimationFrame(animFrameId);
+        restartChalkAnimation();
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    /* ==========================================================================
+       11. EVENTOS DE VENTANA E INICIALIZACIÓN
+       ========================================================================== */
+
+    window.addEventListener('resize', () => {
+      if (document.getElementById('simView').classList.contains('active')) {
+        resizeCanvases();
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      resizeCanvases();
+      updateQ1UI();
+      updateQ2UI();
+      animFrameId = requestAnimationFrame(renderLoop);
+    });
+  </script>
+</body>
+</html>
